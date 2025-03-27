@@ -1,19 +1,19 @@
 <!-- BEGIN_TF_DOCS -->
-# Ignored example for e2e tests
+# Complete Example for Maintenance Configuration
 
-This example will not be run as an e2e test as it has the .e2eignore file in the same directory.
+This deploys the module utilizing all configurable attributes.
 
 ```hcl
 terraform {
   required_version = "~> 1.5"
   required_providers {
+    azapi = {
+      source  = "azure/azapi"
+      version = ">= 1.13, < 3"
+    }
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.74"
-    }
-    modtm = {
-      source  = "azure/modtm"
-      version = "~> 0.3"
+      version = "~> 4.21"
     }
     random = {
       source  = "hashicorp/random"
@@ -26,6 +26,7 @@ provider "azurerm" {
   features {}
 }
 
+provider "azapi" {}
 
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
@@ -53,6 +54,12 @@ resource "azurerm_resource_group" "this" {
   name     = module.naming.resource_group.name_unique
 }
 
+resource "azurerm_user_assigned_identity" "this" {
+  location            = azurerm_resource_group.this.location
+  name                = module.naming.user_assigned_identity.name_unique
+  resource_group_name = azurerm_resource_group.this.name
+}
+
 # This is the module call
 # Do not specify location here due to the randomization above.
 # Leaving location as `null` will cause the module to use the resource group location
@@ -61,11 +68,56 @@ module "test" {
   source = "../../"
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
-  resource_group_name = azurerm_resource_group.this.name
+  location                 = azurerm_resource_group.this.location
+  name                     = var.name
+  scope                    = "InGuestPatch"
+  resource_group_name      = azurerm_resource_group.this.name
+  in_guest_user_patch_mode = "User"
+  visibility               = "Custom"
+  enable_telemetry         = var.enable_telemetry
 
-  enable_telemetry = var.enable_telemetry # see variables.tf
+  tags = {
+    environment = "avm"
+  }
+
+  extension_properties = {
+    example = "complete"
+  }
+
+  window = {
+    time_zone            = "Greenwich Standard Time"
+    recur_every          = "2Day"
+    start_date_time      = "5555-10-01T00:00:00Z"
+    expiration_date_time = "6666-10-01T00:00:00Z"
+    duration             = "PT1H"
+  }
+
+  install_patches = {
+    linux = {
+      classifications_to_include    = ["Critical", "Security"]
+      package_name_masks_to_exclude = ["exclude_example"]
+      package_name_masks_to_include = ["include_example"]
+    }
+    reboot_setting = "IfRequired"
+    windows = {
+      classifications_to_include   = ["Critical", "Security"]
+      exclude_kbs_requiring_reboot = true
+      kb_numbers_to_exclude        = ["exclude_example"]
+      kb_numbers_to_include        = ["include_example"]
+    }
+  }
+
+  role_assignments = {
+    role1 = {
+      principal_id               = azurerm_user_assigned_identity.this.principal_id
+      role_definition_id_or_name = "Contributor"
+    }
+  }
+
+  lock = {
+    kind = "CanNotDelete"
+    name = format("lock-%s", var.name)
+  }
 }
 ```
 
@@ -76,9 +128,9 @@ The following requirements are needed by this module:
 
 - <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (~> 1.5)
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 3.74)
+- <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (>= 1.13, < 3)
 
-- <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
+- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.21)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
@@ -87,6 +139,7 @@ The following requirements are needed by this module:
 The following resources are used by this module:
 
 - [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+- [azurerm_user_assigned_identity.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) (resource)
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
 
 <!-- markdownlint-disable MD013 -->
@@ -107,6 +160,14 @@ If it is set to false, then no telemetry will be collected.
 Type: `bool`
 
 Default: `true`
+
+### <a name="input_name"></a> [name](#input\_name)
+
+Description: (Optional) The name of the the maintenance configuration.
+
+Type: `string`
+
+Default: `"mc-complete"`
 
 ## Outputs
 
