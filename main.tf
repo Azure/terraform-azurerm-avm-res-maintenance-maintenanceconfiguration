@@ -22,7 +22,7 @@ resource "azapi_resource" "maintenance_configuration" {
         duration           = var.window.duration
         expirationDateTime = var.window.expiration_date_time
         recurEvery         = var.window.recur_every
-        StartDateTime      = var.window.start_date_time
+        startDateTime      = var.window.start_date_time
         timeZone           = var.window.time_zone
       } : null
       visibility = var.visibility
