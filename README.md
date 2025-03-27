@@ -216,9 +216,9 @@ Type:
 
 ```hcl
 object({
-    duration             = optional(string)
+    duration             = optional(string, "01:30")
     expiration_date_time = optional(string)
-    recur_every          = string # TODO: Check if required
+    recur_every          = string
     start_date_time      = string
     time_zone            = string
   })
