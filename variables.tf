@@ -28,8 +28,8 @@ variable "scope" {
   description = "(Required) The scope of the Maintenance Configuration. Possible values are Extension, Host, InGuestPatch, OSImage, SQLDB or SQLManagedInstance."
 
   validation {
-    condition     = contains(["Extension", "Host", "InGuestPatch", "OSImage", "SQLDB", "SQLManagedInstance"], var.scope)
-    error_message = "The `scope` must be one of the following: 'Extension', 'Host', 'InGuestPatch', 'OSImage', 'SQLDB', or 'SQLManagedInstance'."
+    condition     = contains(["Extension", "Host", "InGuestPatch", "OSImage", "Resource", "SQLDB", "SQLManagedInstance"], var.scope)
+    error_message = "The `scope` must be one of the following: 'Extension', 'Host', 'InGuestPatch', 'OSImage', `Resource`, 'SQLDB', or 'SQLManagedInstance'."
   }
 }
 
