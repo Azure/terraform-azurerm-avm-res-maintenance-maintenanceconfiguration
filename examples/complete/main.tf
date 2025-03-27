@@ -83,7 +83,7 @@ module "test" {
     recur_every          = "2Day"
     start_date_time      = "5555-10-01 00:00"
     expiration_date_time = "6666-10-01 00:00"
-    duration             = "PT1H"
+    duration             = "01:30"
   }
 
   install_patches = {
