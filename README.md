@@ -102,7 +102,7 @@ Description: (Optional) The install patches of the Maintenance Configuration. Mu
   - `package_name_masks_to_include` - (Optional) The package name masks to include.
 - `reboot_setting` - (Optional) Possible reboot preference as defined by the user based on which it would be decided to reboot the machine or not after the patch operation is completed. Possible values are Always, IfRequired and Never. This property only applies when scope is set to InGuestPatch.
 - `windows` - (Optional) The Windows parameters of the Maintenance Configuration. This property only applies when scope is set to InGuestPatch.
-  - `classifications_to_include` - (Optional) The classifications to include.
+  - `classifications_to_include` - (Optional) List of Classification category of patches to be patched. Possible values are Critical, Security, UpdateRollup, FeaturePack, ServicePack, Definition, Tools and Updates.
   - `exclude_kbs_requiring_reboot` - (Optional) The exclude Kbs requiring reboot.
   - `kb_numbers_to_exclude` - (Optional) The KB numbers to exclude.
   - `kb_numbers_to_include` - (Optional) The KB numbers to include.

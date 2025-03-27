@@ -81,23 +81,23 @@ module "test" {
   window = {
     time_zone            = "Greenwich Standard Time"
     recur_every          = "2Day"
-    start_date_time      = "5555-10-01T00:00:00Z"
-    expiration_date_time = "6666-10-01T00:00:00Z"
+    start_date_time      = "5555-10-01 00:00"
+    expiration_date_time = "6666-10-01 00:00"
     duration             = "PT1H"
   }
 
   install_patches = {
     linux = {
       classifications_to_include    = ["Critical", "Security"]
-      package_name_masks_to_exclude = ["exclude_example"]
-      package_name_masks_to_include = ["include_example"]
+      package_name_masks_to_exclude = ["package1"]
+      package_name_masks_to_include = ["package2"]
     }
     reboot_setting = "IfRequired"
     windows = {
       classifications_to_include   = ["Critical", "Security"]
       exclude_kbs_requiring_reboot = true
-      kb_numbers_to_exclude        = ["exclude_example"]
-      kb_numbers_to_include        = ["include_example"]
+      kb_numbers_to_exclude        = ["KB123456"]
+      kb_numbers_to_include        = ["KB789101"]
     }
   }
 

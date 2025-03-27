@@ -65,7 +65,7 @@ module "test" {
   window = {
     time_zone       = "Greenwich Standard Time"
     recur_every     = "2Day"
-    start_date_time = "5555-10-01T00:00:00Z"
+    start_date_time = "5555-10-01 00:00"
   }
 
   install_patches = {
