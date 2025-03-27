@@ -28,10 +28,11 @@ resource "azapi_resource" "maintenance_configuration" {
       visibility = var.visibility
     }
   }
-  location  = var.location
-  name      = var.name
-  parent_id = "/subscriptions/${local.subscription_id}/resourceGroups/${var.resource_group_name}"
-  tags      = var.tags
+  location               = var.location
+  name                   = var.name
+  parent_id              = "/subscriptions/${local.subscription_id}/resourceGroups/${var.resource_group_name}"
+  response_export_values = []
+  tags                   = var.tags
 }
 
 # required AVM resources interfaces

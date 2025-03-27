@@ -107,9 +107,4 @@ module "test" {
       role_definition_id_or_name = "Contributor"
     }
   }
-
-  lock = {
-    kind = "CanNotDelete"
-    name = format("lock-%s", var.name)
-  }
 }
