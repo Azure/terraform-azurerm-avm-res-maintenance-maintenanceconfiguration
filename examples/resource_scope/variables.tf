@@ -10,6 +10,6 @@ DESCRIPTION
 
 variable "name" {
   type        = string
-  default     = "mc-default"
+  default     = "mc-resource-scope"
   description = "(Optional) The name of the the maintenance configuration."
 }
