@@ -56,16 +56,19 @@ module "test" {
   source = "../../"
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location                 = azurerm_resource_group.this.location
-  name                     = var.name
-  scope                    = "InGuestPatch"
-  resource_group_name      = azurerm_resource_group.this.name
-  in_guest_user_patch_mode = "User"
+  location            = azurerm_resource_group.this.location
+  name                = var.name
+  scope               = "InGuestPatch"
+  resource_group_name = azurerm_resource_group.this.name
 
   window = {
     time_zone       = "Greenwich Standard Time"
     recur_every     = "2Day"
     start_date_time = "5555-10-01 00:00"
+  }
+
+  extension_properties = {
+    InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
 
   install_patches = {

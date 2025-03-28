@@ -84,14 +84,6 @@ Type: `map(any)`
 
 Default: `{}`
 
-### <a name="input_in_guest_user_patch_mode"></a> [in\_guest\_user\_patch\_mode](#input\_in\_guest\_user\_patch\_mode)
-
-Description: (Optional) The in guest user patch mode. Possible values are Platform or User. Must be specified when scope is InGuestPatch.
-
-Type: `string`
-
-Default: `"User"`
-
 ### <a name="input_install_patches"></a> [install\_patches](#input\_install\_patches)
 
 Description: (Optional) The install patches of the Maintenance Configuration. Must be specified when scope is InGuestPatch.

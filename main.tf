@@ -2,7 +2,7 @@ resource "azapi_resource" "maintenance_configuration" {
   type = "Microsoft.Maintenance/maintenanceConfigurations@2023-10-01-preview"
   body = {
     properties = {
-      extensionProperties = var.scope == "InGuestPatch" ? merge(var.extension_properties, { InGuestPatchMode = var.in_guest_user_patch_mode }) : var.extension_properties
+      extensionProperties = var.extension_properties
       installPatches = var.install_patches != null && var.scope == "InGuestPatch" ? {
         linuxParameters = var.install_patches.linux != null ? {
           classificationsToInclude  = var.install_patches.linux.classifications_to_include

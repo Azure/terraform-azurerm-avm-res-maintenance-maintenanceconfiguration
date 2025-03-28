@@ -50,17 +50,6 @@ variable "extension_properties" {
   description = "(Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension."
 }
 
-variable "in_guest_user_patch_mode" {
-  type        = string
-  default     = "User"
-  description = "(Optional) The in guest user patch mode. Possible values are Platform or User. Must be specified when scope is InGuestPatch."
-
-  validation {
-    condition     = var.scope != "InGuestPatch" || contains(["Platform", "User"], var.in_guest_user_patch_mode)
-    error_message = "The `in_guest_user_patch_mode` must be either 'Platform' or 'User' when `scope` is 'InGuestPatch'."
-  }
-}
-
 variable "install_patches" {
   type = object({
     linux = optional(object({

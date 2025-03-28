@@ -62,20 +62,19 @@ module "test" {
   source = "../../"
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location                 = azurerm_resource_group.this.location
-  name                     = var.name
-  scope                    = "InGuestPatch"
-  resource_group_name      = azurerm_resource_group.this.name
-  in_guest_user_patch_mode = "User"
-  visibility               = "Custom"
-  enable_telemetry         = var.enable_telemetry
+  location            = azurerm_resource_group.this.location
+  name                = var.name
+  scope               = "InGuestPatch"
+  resource_group_name = azurerm_resource_group.this.name
+  visibility          = "Custom"
+  enable_telemetry    = var.enable_telemetry
 
   tags = {
     environment = "avm"
   }
 
   extension_properties = {
-    example = "complete"
+    InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
 
   window = {
