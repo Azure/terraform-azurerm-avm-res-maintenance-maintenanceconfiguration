@@ -1,5 +1,5 @@
 resource "azapi_resource" "maintenance_configuration" {
-  type = "Microsoft.Maintenance/maintenanceConfigurations@2023-10-01-preview"
+  type = "Microsoft.Maintenance/maintenanceConfigurations@2023-04-01"
   body = {
     properties = {
       extensionProperties = var.extension_properties
