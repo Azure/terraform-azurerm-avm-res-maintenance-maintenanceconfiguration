@@ -80,7 +80,7 @@ Default: `true`
 
 Description: (Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension.
 
-Type: `map(any)`
+Type: `map(string)`
 
 Default: `{}`
 
@@ -89,12 +89,12 @@ Default: `{}`
 Description: (Optional) The install patches of the Maintenance Configuration. Must be specified when scope is InGuestPatch.
 
 - `linux` - (Optional) The Linux parameters of the Maintenance Configuration. This property only applies when scope is set to InGuestPatch.
-  - `classifications_to_include` - (Optional) The classifications to include.
+  - `classifications_to_include` - (Optional) The classifications to include. Defaults to Critical & Security
   - `package_name_masks_to_exclude` - (Optional) The package name masks to exclude.
   - `package_name_masks_to_include` - (Optional) The package name masks to include.
 - `reboot_setting` - (Optional) Possible reboot preference as defined by the user based on which it would be decided to reboot the machine or not after the patch operation is completed. Possible values are Always, IfRequired and Never. This property only applies when scope is set to InGuestPatch.
 - `windows` - (Optional) The Windows parameters of the Maintenance Configuration. This property only applies when scope is set to InGuestPatch.
-  - `classifications_to_include` - (Optional) List of Classification category of patches to be patched. Possible values are Critical, Security, UpdateRollup, FeaturePack, ServicePack, Definition, Tools and Updates.
+  - `classifications_to_include` - (Optional) List of Classification category of patches to be patched. Possible values are Critical, Security, UpdateRollup, FeaturePack, ServicePack, Definition, Tools and Updates. Defaults to Critical & Security
   - `exclude_kbs_requiring_reboot` - (Optional) The exclude Kbs requiring reboot.
   - `kb_numbers_to_exclude` - (Optional) The KB numbers to exclude.
   - `kb_numbers_to_include` - (Optional) The KB numbers to include.
@@ -104,13 +104,13 @@ Type:
 ```hcl
 object({
     linux = optional(object({
-      classifications_to_include    = optional(list(string), [])
+      classifications_to_include    = optional(list(string), ["Critical", "Security"])
       package_name_masks_to_exclude = optional(list(string), [])
       package_name_masks_to_include = optional(list(string), [])
     }))
     reboot_setting = optional(string)
     windows = optional(object({
-      classifications_to_include   = optional(list(string), [])
+      classifications_to_include   = optional(list(string), ["Critical", "Security"])
       exclude_kbs_requiring_reboot = optional(bool)
       kb_numbers_to_exclude        = optional(list(string), [])
       kb_numbers_to_include        = optional(list(string), [])
@@ -118,7 +118,7 @@ object({
   })
 ```
 
-Default: `null`
+Default: `{}`
 
 ### <a name="input_lock"></a> [lock](#input\_lock)
 
@@ -198,7 +198,7 @@ Default: `"Custom"`
 
 Description: (Optional) The maintenance window of the Maintenance Configuration.
 
-- `duration` - (Optional) The duration of the maintenance window in HH:mm format.
+- `duration` - (Optional) The duration of the maintenance window in HH:mm format. Defaults to 01:30
 - `expiration_date_time` - (Optional) Effective expiration date of the maintenance window in YYYY-MM-DD hh:mm format.
 - `recur_every` - (Required) The rate at which a maintenance window is expected to recur. The rate can be expressed as daily, weekly, or monthly schedules.
 - `start_date_time` - (Required) Effective start date of the maintenance window in YYYY-MM-DD hh:mm format.
