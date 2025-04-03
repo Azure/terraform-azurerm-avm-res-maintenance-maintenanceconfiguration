@@ -60,9 +60,12 @@ module "test" {
   source = "../../"
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location            = azurerm_resource_group.this.location
-  name                = var.name
-  scope               = "Host"
+  location = azurerm_resource_group.this.location
+  name     = var.name
+  scope    = "Resource"
+  extension_properties = {
+    maintenanceSubScope = "NetworkGatewayMaintenance"
+  }
   resource_group_name = azurerm_resource_group.this.name
   enable_telemetry    = var.enable_telemetry
 }

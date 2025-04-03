@@ -1,7 +1,7 @@
 <!-- BEGIN_TF_DOCS -->
-# Simple example for the Maintenance Configuration module
+# Guest Scope Maintenance Configuration Example
 
-This deploys the module in its simplest form; leveraging the default values in the module.
+This deploys the module with the `scope` of `InGuestPatch` with the supporting attributes for its configuration.
 
 ```hcl
 terraform {
@@ -68,9 +68,30 @@ module "test" {
   # ...
   location            = azurerm_resource_group.this.location
   name                = var.name
-  scope               = "Host"
+  scope               = "InGuestPatch"
   resource_group_name = azurerm_resource_group.this.name
-  enable_telemetry    = var.enable_telemetry
+
+  window = {
+    time_zone       = "Greenwich Standard Time"
+    recur_every     = "2Day"
+    start_date_time = "5555-10-01 00:00"
+  }
+
+  extension_properties = {
+    InGuestPatchMode = "User" # Can either 'Platform' or 'User'
+  }
+
+  install_patches = {
+    linux = {
+      classifications_to_include = ["Critical", "Security"]
+    }
+    reboot_setting = "IfRequired"
+    windows = {
+      classifications_to_include = ["Critical", "Security"]
+    }
+  }
+
+  enable_telemetry = var.enable_telemetry
 }
 ```
 
@@ -119,7 +140,7 @@ Description: (Optional) The name of the the maintenance configuration.
 
 Type: `string`
 
-Default: `"mc-default"`
+Default: `"mc-guest-scope"`
 
 ## Outputs
 

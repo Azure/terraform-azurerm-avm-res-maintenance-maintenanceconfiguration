@@ -1,7 +1,7 @@
 <!-- BEGIN_TF_DOCS -->
-# Simple example for the Maintenance Configuration module
+# Complete Example for Maintenance Configuration
 
-This deploys the module in its simplest form; leveraging the default values in the module.
+This deploys the module utilizing all configurable attributes.
 
 ```hcl
 terraform {
@@ -58,6 +58,12 @@ resource "azurerm_resource_group" "this" {
   name     = module.naming.resource_group.name_unique
 }
 
+resource "azurerm_user_assigned_identity" "this" {
+  location            = azurerm_resource_group.this.location
+  name                = module.naming.user_assigned_identity.name_unique
+  resource_group_name = azurerm_resource_group.this.name
+}
+
 # This is the module call
 # Do not specify location here due to the randomization above.
 # Leaving location as `null` will cause the module to use the resource group location
@@ -68,9 +74,48 @@ module "test" {
   # ...
   location            = azurerm_resource_group.this.location
   name                = var.name
-  scope               = "Host"
+  scope               = "InGuestPatch"
   resource_group_name = azurerm_resource_group.this.name
+  visibility          = "Custom"
   enable_telemetry    = var.enable_telemetry
+
+  tags = {
+    environment = "avm"
+  }
+
+  extension_properties = {
+    InGuestPatchMode = "User" # Can either 'Platform' or 'User'
+  }
+
+  window = {
+    time_zone            = "Greenwich Standard Time"
+    recur_every          = "2Day"
+    start_date_time      = "5555-10-01 00:00"
+    expiration_date_time = "6666-10-01 00:00"
+    duration             = "01:30"
+  }
+
+  install_patches = {
+    linux = {
+      classifications_to_include    = ["Critical", "Security"]
+      package_name_masks_to_exclude = ["package1"]
+      package_name_masks_to_include = ["package2"]
+    }
+    reboot_setting = "IfRequired"
+    windows = {
+      classifications_to_include   = ["Critical", "Security"]
+      exclude_kbs_requiring_reboot = true
+      kb_numbers_to_exclude        = ["KB123456"]
+      kb_numbers_to_include        = ["KB789101"]
+    }
+  }
+
+  role_assignments = {
+    role1 = {
+      principal_id               = azurerm_user_assigned_identity.this.principal_id
+      role_definition_id_or_name = "Contributor"
+    }
+  }
 }
 ```
 
@@ -92,6 +137,7 @@ The following requirements are needed by this module:
 The following resources are used by this module:
 
 - [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+- [azurerm_user_assigned_identity.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) (resource)
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
 
 <!-- markdownlint-disable MD013 -->
@@ -119,7 +165,7 @@ Description: (Optional) The name of the the maintenance configuration.
 
 Type: `string`
 
-Default: `"mc-default"`
+Default: `"mc-complete"`
 
 ## Outputs
 

@@ -1,19 +1,19 @@
 <!-- BEGIN_TF_DOCS -->
-# Ignored example for e2e tests
+# Resource Scope example for the Maintenance Configuration module
 
-This example will not be run as an e2e test as it has the .e2eignore file in the same directory.
+This deploys the module with the scope of `Resource` which can update Azure Resources like Network Gateways and Network Security.
 
 ```hcl
 terraform {
   required_version = "~> 1.5"
   required_providers {
+    azapi = {
+      source  = "azure/azapi"
+      version = ">= 1.13, < 3"
+    }
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.74"
-    }
-    modtm = {
-      source  = "azure/modtm"
-      version = "~> 0.3"
+      version = "~> 4.21"
     }
     random = {
       source  = "hashicorp/random"
@@ -23,9 +23,14 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  features {
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 }
 
+provider "azapi" {}
 
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
@@ -61,11 +66,14 @@ module "test" {
   source = "../../"
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
+  location = azurerm_resource_group.this.location
+  name     = var.name
+  scope    = "Resource"
+  extension_properties = {
+    maintenanceSubScope = "NetworkGatewayMaintenance"
+  }
   resource_group_name = azurerm_resource_group.this.name
-
-  enable_telemetry = var.enable_telemetry # see variables.tf
+  enable_telemetry    = var.enable_telemetry
 }
 ```
 
@@ -76,9 +84,9 @@ The following requirements are needed by this module:
 
 - <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (~> 1.5)
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 3.74)
+- <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (>= 1.13, < 3)
 
-- <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
+- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.21)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
@@ -107,6 +115,14 @@ If it is set to false, then no telemetry will be collected.
 Type: `bool`
 
 Default: `true`
+
+### <a name="input_name"></a> [name](#input\_name)
+
+Description: (Optional) The name of the the maintenance configuration.
+
+Type: `string`
+
+Default: `"mc-resource-scope"`
 
 ## Outputs
 

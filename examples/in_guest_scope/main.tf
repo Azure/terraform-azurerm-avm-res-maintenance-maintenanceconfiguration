@@ -1,13 +1,13 @@
 terraform {
   required_version = "~> 1.5"
   required_providers {
+    azapi = {
+      source  = "azure/azapi"
+      version = ">= 1.13, < 3"
+    }
     azurerm = {
       source  = "hashicorp/azurerm"
       version = "~> 4.21"
-    }
-    modtm = {
-      source  = "azure/modtm"
-      version = "~> 0.3"
     }
     random = {
       source  = "hashicorp/random"
@@ -17,9 +17,14 @@ terraform {
 }
 
 provider "azurerm" {
-  features {}
+  features {
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 }
 
+provider "azapi" {}
 
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
@@ -56,8 +61,29 @@ module "test" {
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
   location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
+  name                = var.name
+  scope               = "InGuestPatch"
   resource_group_name = azurerm_resource_group.this.name
 
-  enable_telemetry = var.enable_telemetry # see variables.tf
+  window = {
+    time_zone       = "Greenwich Standard Time"
+    recur_every     = "2Day"
+    start_date_time = "5555-10-01 00:00"
+  }
+
+  extension_properties = {
+    InGuestPatchMode = "User" # Can either 'Platform' or 'User'
+  }
+
+  install_patches = {
+    linux = {
+      classifications_to_include = ["Critical", "Security"]
+    }
+    reboot_setting = "IfRequired"
+    windows = {
+      classifications_to_include = ["Critical", "Security"]
+    }
+  }
+
+  enable_telemetry = var.enable_telemetry
 }
