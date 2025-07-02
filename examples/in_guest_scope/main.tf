@@ -1,5 +1,6 @@
 terraform {
   required_version = "~> 1.5"
+
   required_providers {
     azapi = {
       source  = "azure/azapi"
@@ -58,23 +59,17 @@ resource "azurerm_resource_group" "this" {
 # with a data source.
 module "test" {
   source = "../../"
+
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
   location            = azurerm_resource_group.this.location
   name                = var.name
-  scope               = "InGuestPatch"
   resource_group_name = azurerm_resource_group.this.name
-
-  window = {
-    time_zone       = "Greenwich Standard Time"
-    recur_every     = "2Day"
-    start_date_time = "5555-10-01 00:00"
-  }
-
+  scope               = "InGuestPatch"
+  enable_telemetry    = var.enable_telemetry
   extension_properties = {
     InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
-
   install_patches = {
     linux = {
       classifications_to_include = ["Critical", "Security"]
@@ -84,6 +79,9 @@ module "test" {
       classifications_to_include = ["Critical", "Security"]
     }
   }
-
-  enable_telemetry = var.enable_telemetry
+  window = {
+    time_zone       = "Greenwich Standard Time"
+    recur_every     = "2Day"
+    start_date_time = "5555-10-01 00:00"
+  }
 }
