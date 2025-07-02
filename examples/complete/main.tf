@@ -1,5 +1,6 @@
 terraform {
   required_version = "~> 1.5"
+
   required_providers {
     azapi = {
       source  = "azure/azapi"
@@ -64,31 +65,17 @@ resource "azurerm_user_assigned_identity" "this" {
 # with a data source.
 module "test" {
   source = "../../"
+
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
   location            = azurerm_resource_group.this.location
   name                = var.name
-  scope               = "InGuestPatch"
   resource_group_name = azurerm_resource_group.this.name
-  visibility          = "Custom"
+  scope               = "InGuestPatch"
   enable_telemetry    = var.enable_telemetry
-
-  tags = {
-    environment = "avm"
-  }
-
   extension_properties = {
     InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
-
-  window = {
-    time_zone            = "Greenwich Standard Time"
-    recur_every          = "2Day"
-    start_date_time      = "5555-10-01 00:00"
-    expiration_date_time = "6666-10-01 00:00"
-    duration             = "01:30"
-  }
-
   install_patches = {
     linux = {
       classifications_to_include    = ["Critical", "Security"]
@@ -103,11 +90,21 @@ module "test" {
       kb_numbers_to_include        = ["KB789101"]
     }
   }
-
   role_assignments = {
     role1 = {
       principal_id               = azurerm_user_assigned_identity.this.principal_id
       role_definition_id_or_name = "Contributor"
     }
+  }
+  tags = {
+    environment = "avm"
+  }
+  visibility = "Custom"
+  window = {
+    time_zone            = "Greenwich Standard Time"
+    recur_every          = "2Day"
+    start_date_time      = "5555-10-01 00:00"
+    expiration_date_time = "6666-10-01 00:00"
+    duration             = "01:30"
   }
 }
