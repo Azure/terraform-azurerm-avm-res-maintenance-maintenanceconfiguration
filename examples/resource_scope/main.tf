@@ -1,5 +1,6 @@
 terraform {
   required_version = "~> 1.5"
+
   required_providers {
     azapi = {
       source  = "azure/azapi"
@@ -58,14 +59,15 @@ resource "azurerm_resource_group" "this" {
 # with a data source.
 module "test" {
   source = "../../"
+
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location = azurerm_resource_group.this.location
-  name     = var.name
-  scope    = "Resource"
+  location            = azurerm_resource_group.this.location
+  name                = var.name
+  resource_group_name = azurerm_resource_group.this.name
+  scope               = "Resource"
+  enable_telemetry    = var.enable_telemetry
   extension_properties = {
     maintenanceSubScope = "NetworkGatewayMaintenance"
   }
-  resource_group_name = azurerm_resource_group.this.name
-  enable_telemetry    = var.enable_telemetry
 }

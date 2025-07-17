@@ -1,5 +1,8 @@
 resource "azapi_resource" "maintenance_configuration" {
-  type = "Microsoft.Maintenance/maintenanceConfigurations@2023-04-01"
+  location  = var.location
+  name      = var.name
+  parent_id = "/subscriptions/${local.subscription_id}/resourceGroups/${var.resource_group_name}"
+  type      = "Microsoft.Maintenance/maintenanceConfigurations@2023-04-01"
   body = {
     properties = {
       extensionProperties = var.extension_properties
@@ -28,10 +31,7 @@ resource "azapi_resource" "maintenance_configuration" {
       visibility = var.visibility
     }
   }
-  location  = var.location
-  name      = var.name
-  parent_id = "/subscriptions/${local.subscription_id}/resourceGroups/${var.resource_group_name}"
-  tags      = var.tags
+  tags = var.tags
 
   lifecycle {
     ignore_changes = [
