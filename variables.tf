@@ -108,6 +108,16 @@ DESCRIPTION
   }
 }
 
+variable "retry" {
+  type = object({
+    error_message_regex  = optional(list(string), ["ReferencedResourceNotProvisioned"])
+    interval_seconds     = optional(number, 10)
+    max_interval_seconds = optional(number, 180)
+  })
+  default     = {}
+  description = "Retry configuration for the resource operations"
+}
+
 variable "role_assignments" {
   type = map(object({
     role_definition_id_or_name             = string
