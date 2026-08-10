@@ -1,6 +1,7 @@
 # required AVM interfaces
 # remove only if not supported by the resource
 
+
 variable "location" {
   type        = string
   description = "(Required) Azure region where the resource should be deployed."
