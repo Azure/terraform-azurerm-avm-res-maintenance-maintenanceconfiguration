@@ -48,8 +48,13 @@ DESCRIPTION
 variable "extension_properties" {
   type        = map(string)
   default     = {}
-  description = "(Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension."
+  description = "(Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension. When scope is InGuestPatch, `InGuestPatchMode` must be set to either `User` or `Platform`."
   nullable    = false
+
+  validation {
+    condition     = var.scope != "InGuestPatch" || contains(["User", "Platform"], lookup(var.extension_properties, "InGuestPatchMode", ""))
+    error_message = "When `scope` is 'InGuestPatch', `extension_properties.InGuestPatchMode` must be specified and set to either 'User' or 'Platform'."
+  }
 }
 
 variable "install_patches" {
