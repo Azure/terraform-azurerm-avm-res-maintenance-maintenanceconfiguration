@@ -40,7 +40,7 @@ module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "~> 0.1"
 
-  enable_telemetry = false
+  enable_telemetry = var.enable_telemetry
 }
 
 # This allows us to randomize the region for the resource group.
@@ -76,7 +76,7 @@ module "test" {
   name                = var.name
   resource_group_name = azurerm_resource_group.this.name
   scope               = "InGuestPatch"
-  enable_telemetry    = false
+  enable_telemetry    = var.enable_telemetry
   extension_properties = {
     InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
@@ -134,7 +134,7 @@ If it is set to false, then no telemetry will be collected.
 
 Type: `bool`
 
-Default: `true`
+Default: `false`
 
 ### <a name="input_name"></a> [name](#input\_name)
 
