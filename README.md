@@ -15,23 +15,23 @@ The following requirements are needed by this module:
 
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
-
 - <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
+
+- <a name="requirement_time"></a> [time](#requirement\_time) (~> 0.13)
 
 ## Resources
 
 The following resources are used by this module:
 
-- [azapi_resource.maintenance_configuration](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
-- [azurerm_management_lock.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/management_lock) (resource)
-- [azurerm_role_assignment.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
+- [azapi_resource.lock](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
+- [azapi_resource.role_assignments](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
+- [azapi_resource.this](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
 - [modtm_telemetry.telemetry](https://registry.terraform.io/providers/azure/modtm/latest/docs/resources/telemetry) (resource)
 - [random_uuid.telemetry](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/uuid) (resource)
+- [time_sleep.wait_for_resource_destroy](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) (resource)
 - [azapi_client_config.telemetry](https://registry.terraform.io/providers/Azure/azapi/latest/docs/data-sources/client_config) (data source)
-- [azurerm_client_config.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
 - [modtm_module_source.telemetry](https://registry.terraform.io/providers/azure/modtm/latest/docs/data-sources/module_source) (data source)
 
 <!-- markdownlint-disable MD013 -->
@@ -51,9 +51,9 @@ Description: (Required) The name of the this resource.
 
 Type: `string`
 
-### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
+### <a name="input_parent_id"></a> [parent\_id](#input\_parent\_id)
 
-Description: (Required) The resource group where the resources will be deployed.
+Description: The Azure resource ID of the parent resource group, in the form `/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}`.
 
 Type: `string`
 
@@ -82,6 +82,20 @@ Default: `true`
 Description: (Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension.
 
 Type: `map(string)`
+
+Default: `{}`
+
+### <a name="input_ignore_body_changes"></a> [ignore\_body\_changes](#input\_ignore\_body\_changes)
+
+Description: A map of AzAPI body paths to ignore for each resource.
+
+Type:
+
+```hcl
+object({
+    maintenance_maintenance_configurations = optional(list(string), [])
+  })
+```
 
 Default: `{}`
 
@@ -139,6 +153,20 @@ object({
 
 Default: `null`
 
+### <a name="input_resource_types"></a> [resource\_types](#input\_resource\_types)
+
+Description: The Azure resource type API versions used by this module.
+
+Type:
+
+```hcl
+object({
+    maintenance_maintenance_configurations = optional(string, "Microsoft.Maintenance/maintenanceConfigurations@2023-04-01")
+  })
+```
+
+Default: `{}`
+
 ### <a name="input_retry"></a> [retry](#input\_retry)
 
 Description: Retry configuration for the resource operations
@@ -187,14 +215,6 @@ map(object({
 
 Default: `{}`
 
-### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
-
-Description: (Optional) This specifies a subscription ID which is used to construct the parent ID for the maintenance configuration.
-
-Type: `string`
-
-Default: `null`
-
 ### <a name="input_tags"></a> [tags](#input\_tags)
 
 Description: (Optional) Tags of the resource.
@@ -202,6 +222,25 @@ Description: (Optional) Tags of the resource.
 Type: `map(string)`
 
 Default: `null`
+
+### <a name="input_timeouts"></a> [timeouts](#input\_timeouts)
+
+Description: Timeout configuration for resources created by this module.
+
+Type:
+
+```hcl
+object({
+    maintenance_maintenance_configurations = optional(object({
+      create = optional(string, "30m")
+      delete = optional(string, "30m")
+      read   = optional(string, "5m")
+      update = optional(string, "30m")
+    }), {})
+  })
+```
+
+Default: `{}`
 
 ### <a name="input_visibility"></a> [visibility](#input\_visibility)
 
@@ -249,7 +288,13 @@ Description: The ID of the Maintenance Configuration resource.
 
 ## Modules
 
-No modules.
+The following Modules are called:
+
+### <a name="module_avm_interfaces"></a> [avm\_interfaces](#module\_avm\_interfaces)
+
+Source: Azure/avm-utl-interfaces/azure
+
+Version: 0.6.0
 
 <!-- markdownlint-disable-next-line MD041 -->
 ## Data Collection

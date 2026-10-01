@@ -6,21 +6,9 @@ terraform {
       source  = "azure/azapi"
       version = ">= 1.13, < 3"
     }
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.21"
-    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.5"
-    }
-  }
-}
-
-provider "azurerm" {
-  features {
-    resource_group {
-      prevent_deletion_if_contains_resources = false
     }
   }
 }
@@ -31,7 +19,7 @@ provider "azapi" {}
 # This allows us to randomize the region for the resource group.
 module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
-  version = "~> 0.1"
+  version = "0.12.0"
 
   enable_telemetry = var.enable_telemetry
 }
@@ -47,13 +35,16 @@ resource "random_integer" "region_index" {
 # This ensures we have unique CAF compliant names for our resources.
 module "naming" {
   source  = "Azure/naming/azurerm"
-  version = "~> 0.3"
+  version = "0.4.4"
 }
 
-# This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+module "resource_group" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.4.0"
+
+  location         = module.regions.regions[random_integer.region_index.result].name
+  name             = module.naming.resource_group.name_unique
+  enable_telemetry = var.enable_telemetry
 }
 
 # This is the module call
@@ -65,11 +56,11 @@ module "test" {
 
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location            = azurerm_resource_group.this.location
-  name                = var.name
-  resource_group_name = azurerm_resource_group.this.name
-  scope               = "InGuestPatch"
-  enable_telemetry    = var.enable_telemetry
+  location         = module.resource_group.location
+  name             = var.name
+  parent_id        = module.resource_group.resource_id
+  scope            = "InGuestPatch"
+  enable_telemetry = var.enable_telemetry
   extension_properties = {
     InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
