@@ -18,10 +18,14 @@ variable "name" {
   }
 }
 
-# This is required for most resource modules
-variable "resource_group_name" {
+variable "parent_id" {
   type        = string
-  description = "(Required) The resource group where the resources will be deployed."
+  description = "The Azure resource ID of the parent resource group, in the form `/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}`."
+
+  validation {
+    condition     = can(provider::azapi::parse_resource_id("Microsoft.Resources/resourceGroups", var.parent_id))
+    error_message = "The parent_id must be a valid Azure resource group resource ID."
+  }
 }
 
 variable "scope" {
@@ -49,6 +53,15 @@ variable "extension_properties" {
   type        = map(string)
   default     = {}
   description = "(Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension."
+  nullable    = false
+}
+
+variable "ignore_body_changes" {
+  type = object({
+    maintenance_maintenance_configurations = optional(list(string), [])
+  })
+  default     = {}
+  description = "A map of AzAPI body paths to ignore for each resource."
   nullable    = false
 }
 
@@ -109,6 +122,15 @@ DESCRIPTION
   }
 }
 
+variable "resource_types" {
+  type = object({
+    maintenance_maintenance_configurations = optional(string, "Microsoft.Maintenance/maintenanceConfigurations@2023-04-01")
+  })
+  default     = {}
+  description = "The Azure resource type API versions used by this module."
+  nullable    = false
+}
+
 variable "retry" {
   type = object({
     error_message_regex  = optional(list(string), ["ReferencedResourceNotProvisioned"])
@@ -148,17 +170,25 @@ variable "role_assignments" {
   nullable    = false
 }
 
-variable "subscription_id" {
-  type        = string
-  default     = null
-  description = "(Optional) This specifies a subscription ID which is used to construct the parent ID for the maintenance configuration."
-}
-
 # tflint-ignore: terraform_unused_declarations
 variable "tags" {
   type        = map(string)
   default     = null
   description = "(Optional) Tags of the resource."
+}
+
+variable "timeouts" {
+  type = object({
+    maintenance_maintenance_configurations = optional(object({
+      create = optional(string, "30m")
+      delete = optional(string, "30m")
+      read   = optional(string, "5m")
+      update = optional(string, "30m")
+    }), {})
+  })
+  default     = {}
+  description = "Timeout configuration for resources created by this module."
+  nullable    = false
 }
 
 variable "visibility" {
