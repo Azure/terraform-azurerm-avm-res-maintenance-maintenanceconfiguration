@@ -1,26 +1,14 @@
 terraform {
-  required_version = "~> 1.5"
+  required_version = ">= 1.9, < 2.0"
 
   required_providers {
     azapi = {
-      source  = "azure/azapi"
-      version = ">= 1.13, < 3"
-    }
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.21"
+      source  = "Azure/azapi"
+      version = "~> 2.12"
     }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.5"
-    }
-  }
-}
-
-provider "azurerm" {
-  features {
-    resource_group {
-      prevent_deletion_if_contains_resources = false
     }
   }
 }
@@ -51,26 +39,26 @@ module "naming" {
   version = "0.2.0"
 }
 
-# This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+module "resource_group" {
+  source  = "Azure/avm-res-resources-resourcegroup/azurerm"
+  version = "0.4.0"
+
+  location         = module.regions.regions[random_integer.region_index.result].name
+  name             = module.naming.resource_group.name_unique
+  enable_telemetry = var.enable_telemetry
 }
 
 # This is the module call
-# Do not specify location here due to the randomization above.
-# Leaving location as `null` will cause the module to use the resource group location
-# with a data source.
 module "test" {
   source = "../../"
 
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location            = azurerm_resource_group.this.location
-  name                = var.name
-  resource_group_name = azurerm_resource_group.this.name
-  scope               = "InGuestPatch"
-  enable_telemetry    = var.enable_telemetry
+  location         = module.resource_group.location
+  name             = var.name
+  parent_id        = module.resource_group.resource_id
+  scope            = "InGuestPatch"
+  enable_telemetry = var.enable_telemetry
   extension_properties = {
     InGuestPatchMode = "User" # Can either 'Platform' or 'User'
   }
