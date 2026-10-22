@@ -21,6 +21,9 @@ Use Terraform `>= 1.9, < 2.0` and AzAPI `~> 2.12`. Replace the module's
 parent_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/example"
 ```
 
+Remove the optional `subscription_id` argument if configured; the subscription is
+now derived from `parent_id`.
+
 The `name` and `resource_id` outputs retain their existing meanings and types.
 The new `timeouts` object has flat `create`, `read`, `update`, and `delete` fields
 and defaults to provider timeouts. Non-empty `ignore_body_changes` lists require
