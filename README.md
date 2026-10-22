@@ -48,8 +48,9 @@ the migration.
    upgrade apply. Retain the old modtm and random providers for initialization
    while state still refers to the old telemetry resources.
 2. Remove any `ReadOnly` lock before upgrading: it blocks the reconciliation PUT.
-   Temporarily omit that lock from the module input as well, then restore it in a
-   separate apply after the upgrade. A `CanNotDelete` lock may remain configured.
+   Set `lock = null` and apply using the previous module version first, then
+   upgrade with the lock still disabled. Restore it in a separate apply after
+   the upgrade. A `CanNotDelete` lock may remain configured.
 3. Change the module source/version and `parent_id`, retaining the same resource
    group, name, location, scope, role assignment keys and other settings.
 4. Initialize and save a plan:
@@ -81,6 +82,10 @@ timestamps. The opt-out is forwarded to the utility.
 
 ### Cross-tenant role assignment exception
 
+This exception applies only to assignments with a composite ID in AzureRM state.
+Ordinary assignment IDs use the automatic moves above and do not need state
+removal or consumer-root imports.
+
 AzureRM can store a cross-tenant assignment ID as `<ARM-ID>|<tenant-ID>`.
 AzAPI's provider move does not strip that suffix, so this case is **not** covered
 by the automatic move. Before planning the candidate, back up state, obtain the
@@ -109,7 +114,9 @@ requires separate state-backed verification in the consumer's tenant context.
 ### Behavior and recovery
 
 Lock names and default notes are preserved. Lock deletion waits 30 seconds before
-deleting covered resources, including role assignments. Role definition names are
+deleting covered resources, including role assignments, when the lock is being
+removed. This teardown ordering does not automatically remove an unchanged lock
+for a role-assignment-only replacement. Role definition names are
 resolved case-insensitively at the existing resource group; tenant-level definition
 IDs are subscription-qualified. `skip_service_principal_aad_check = true` supplies
 `principalType = "ServicePrincipal"` unless an explicit principal type overrides it.
@@ -117,6 +124,26 @@ Changing immutable assignment inputs still requires replacement; perform such
 changes separately from the upgrade. The `name` input controls new assignments;
 an adopted assignment retains its GUID, and a later explicit name change triggers
 replacement.
+
+#### Changing role assignments under a lock
+
+Do not combine the state migration with intentional assignment replacement.
+After completing the upgrade, use separate applies for changes to immutable
+assignment inputs when a module-owned lock is configured:
+
+1. Keep the assignment inputs unchanged, set `lock = null`, and apply a reviewed
+   plan that removes only the lock and its associated timer. Confirm the lock is
+   absent before continuing.
+2. Change the assignment inputs, inspect the planned replacement and its
+   permission impact, then apply that separately reviewed plan.
+3. Restore the original lock input and apply a final reviewed plan.
+
+This is a staged operational procedure, not automatic lock orchestration.
+The combined lock-removal, assignment-replacement and lock-restoration sequence
+has not been state-backed verified for this migration candidate. Neither has the
+`ReadOnly` remove-and-restore upgrade exception. Verify these exceptional paths
+in an isolated consumer environment before using them in production; successful
+unchanged-input migration and full teardown do not prove either sequence.
 
 Do not assume reverting the module version rolls back converted provider state.
 After an apply, recovery requires reconciling both state and Azure, using the
