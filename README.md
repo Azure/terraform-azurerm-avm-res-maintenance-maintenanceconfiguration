@@ -6,6 +6,153 @@ This modules is used to create and manage a Maintenance Configuration which is a
 
 For information on how to consume this module, consult the [examples](https://github.com/Azure/terraform-azurerm-avm-res-maintenance-maintenanceconfiguration/tree/main/examples) directory.
 
+## Upgrading from v0.1.0
+
+The maintenance configuration already used AzAPI in v0.1.0. This upgrade renames its
+Terraform address and migrates the AzureRM lock and role assignments to AzAPI at
+the same module and collection boundaries. Existing consumer module keys and role
+assignment map keys must stay unchanged.
+
+Use Terraform `>= 1.9, < 2.0` and AzAPI `~> 2.12`. Replace the module's
+`resource_group_name` argument with the existing resource group's fully-qualified
+`parent_id`, for example:
+
+```hcl
+parent_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/example"
+```
+
+Remove the optional `subscription_id` argument if configured; the subscription is
+now derived from `parent_id`.
+
+The `name` and `resource_id` outputs retain their existing meanings and types.
+The new `timeouts` object has flat `create`, `read`, `update`, and `delete` fields
+and defaults to provider timeouts. Non-empty `ignore_body_changes` lists require
+Terraform 1.11 or later; the default empty lists do not.
+
+### Automatic state conversion
+
+The module owns these declarative moves. Do not copy them into the consumer or
+run `terraform state mv` for the standard upgrade:
+
+| Released address (relative to the consumer module) | New address | Mechanism |
+| --- | --- | --- |
+| `azapi_resource.maintenance_configuration` | `azapi_resource.this` | Same-provider move |
+| `azurerm_management_lock.this[0]` | `azapi_resource.lock[0]` | Provider state conversion |
+| `azurerm_role_assignment.this["key"]` | `azapi_resource.role_assignments["key"]` | Provider state conversion, preserving each key and existing assignment GUID |
+| `modtm_telemetry.telemetry` and `random_uuid.telemetry` | No replacement state binding | Managed telemetry `removed` blocks with `destroy = false` |
+
+There are no inline ARM children to import and no `avm_managed_migration_enabled`
+flag for the standard upgrade. Leave unrelated configuration unchanged during
+the migration.
+
+1. Back up state securely outside version control and record the existing ARM
+   resource IDs, role assignment GUIDs, lock name and notes. Keep the original
+   AzureRM provider configuration (including `features {}`) available through the
+   upgrade apply. Retain the old modtm and random providers for initialization
+   while state still refers to the old telemetry resources.
+2. Remove any `ReadOnly` lock before upgrading: it blocks the reconciliation PUT.
+   Set `lock = null` and apply using the previous module version first, then
+   upgrade with the lock still disabled. Restore it in a separate apply after
+   the upgrade. A `CanNotDelete` lock may remain configured.
+3. Change the module source/version and `parent_id`, retaining the same resource
+   group, name, location, scope, role assignment keys and other settings.
+4. Initialize and save a plan:
+
+   ```powershell
+   terraform init -upgrade
+   terraform plan -out=migration.tfplan
+   terraform show -json migration.tfplan > migration.plan.json
+   ```
+
+5. Inspect all moves, output changes and actions before applying. **Do not apply
+   a plan that deletes or replaces the maintenance configuration, lock or role
+   assignments.** In-place reconciliation is possible. New random UUID state
+   inside the interface utility does not replace existing assignment GUIDs.
+   A lock-removal timer is created only when a lock is configured.
+6. Apply the inspected saved plan with `terraform apply migration.tfplan`. Check
+   that the resource IDs, assignment GUIDs and lock details are unchanged, then
+   run another plan to establish convergence. Remove obsolete provider
+   configurations only after their state references are gone.
+
+Current managed telemetry creates empty subscription-scoped Azure deployments
+when enabled, including in the interface utility. The deployment identity needs
+`Microsoft.Resources/deployments/read`, `write`, and `delete` at the active
+subscription scope. Telemetry intentionally updates only its
+`body.properties.template.outputs.apply_id.value` timestamp on each normal plan.
+With `enable_telemetry = false`, require a completely empty follow-up plan; with
+telemetry enabled, require no infrastructure drift beyond those exact deployment
+timestamps. The opt-out is forwarded to the utility.
+
+### Cross-tenant role assignment exception
+
+This exception applies only to assignments with a composite ID in AzureRM state.
+Ordinary assignment IDs use the automatic moves above and do not need state
+removal or consumer-root imports.
+
+AzureRM can store a cross-tenant assignment ID as `<ARM-ID>|<tenant-ID>`.
+AzAPI's provider move does not strip that suffix, so this case is **not** covered
+by the automatic move. Before planning the candidate, back up state, obtain the
+existing assignment's ARM ID and GUID, and remove only its old binding:
+
+```powershell
+terraform state rm 'module.maintenance.azurerm_role_assignment.this["delegated"]'
+```
+
+In the consumer root, add an import targeting the corresponding new address:
+
+```hcl
+import {
+  to = module.maintenance.azapi_resource.role_assignments["delegated"]
+  id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/example/providers/Microsoft.Maintenance/maintenanceConfigurations/example/providers/Microsoft.Authorization/roleAssignments/11111111-1111-1111-1111-111111111111"
+}
+```
+
+Use the actual consumer module path, including any module instance keys, and the
+actual existing ARM ID **without** the tenant suffix. Preserve the original
+assignment inputs and provider tenant context. Inspect and apply the saved import
+plan, verify the GUID and delegated identity, then remove the root import block.
+Never remove a binding without its matching import. This exceptional procedure
+requires separate state-backed verification in the consumer's tenant context.
+
+### Behavior and recovery
+
+Lock names and default notes are preserved. Lock deletion waits 30 seconds before
+deleting covered resources, including role assignments, when the lock is being
+removed. This teardown ordering does not automatically remove an unchanged lock
+for a role-assignment-only replacement. Role definition names are
+resolved case-insensitively at the existing resource group; tenant-level definition
+IDs are subscription-qualified. `skip_service_principal_aad_check = true` supplies
+`principalType = "ServicePrincipal"` unless an explicit principal type overrides it.
+Changing immutable assignment inputs still requires replacement; perform such
+changes separately from the upgrade. The `name` input controls new assignments;
+an adopted assignment retains its GUID, and a later explicit name change triggers
+replacement.
+
+#### Changing role assignments under a lock
+
+Do not combine the state migration with intentional assignment replacement.
+After completing the upgrade, use separate applies for changes to immutable
+assignment inputs when a module-owned lock is configured:
+
+1. Keep the assignment inputs unchanged, set `lock = null`, and apply a reviewed
+   plan that removes only the lock and its associated timer. Confirm the lock is
+   absent before continuing.
+2. Change the assignment inputs, inspect the planned replacement and its
+   permission impact, then apply that separately reviewed plan.
+3. Restore the original lock input and apply a final reviewed plan.
+
+This is a staged operational procedure, not automatic lock orchestration.
+The combined lock-removal, assignment-replacement and lock-restoration sequence
+has not been state-backed verified for this migration candidate. Neither has the
+`ReadOnly` remove-and-restore upgrade exception. Verify these exceptional paths
+in an isolated consumer environment before using them in production; successful
+unchanged-input migration and full teardown do not prove either sequence.
+
+Do not assume reverting the module version rolls back converted provider state.
+After an apply, recovery requires reconciling both state and Azure, using the
+protected backup and verified live identities. A saved state alone does not undo
+Azure mutations.
+
 <!-- markdownlint-disable MD033 -->
 ## Requirements
 
@@ -15,19 +162,20 @@ The following requirements are needed by this module:
 
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
+- <a name="requirement_time"></a> [time](#requirement\_time) (~> 0.13)
 
 ## Resources
 
 The following resources are used by this module:
 
-- [azapi_resource.maintenance_configuration](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
+- [azapi_resource.lock](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
+- [azapi_resource.role_assignments](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
 - [azapi_resource.telemetry](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
-- [azurerm_management_lock.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/management_lock) (resource)
-- [azurerm_role_assignment.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
+- [azapi_resource.this](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
 - [terraform_data.telemetry](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) (resource)
+- [time_sleep.wait_for_resource_destroy](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/sleep) (resource)
 - [azapi_client_config.telemetry](https://registry.terraform.io/providers/Azure/azapi/latest/docs/data-sources/client_config) (data source)
-- [azurerm_client_config.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
+- [azapi_resource_list.role_definitions](https://registry.terraform.io/providers/Azure/azapi/latest/docs/data-sources/resource_list) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs
@@ -46,9 +194,9 @@ Description: (Required) The name of the this resource.
 
 Type: `string`
 
-### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
+### <a name="input_parent_id"></a> [parent\_id](#input\_parent\_id)
 
-Description: (Required) The resource group where the resources will be deployed.
+Description: The Azure resource ID of the parent resource group, in the form `/subscriptions/{subscription_id}/resourceGroups/{resource_group_name}`.
 
 Type: `string`
 
@@ -77,6 +225,26 @@ Default: `true`
 Description: (Optional) The extension properties of the Maintenance Configuration. Must be specified when scope is Extension.
 
 Type: `map(string)`
+
+Default: `{}`
+
+### <a name="input_ignore_body_changes"></a> [ignore\_body\_changes](#input\_ignore\_body\_changes)
+
+Description: Body-relative paths to ignore for each AzAPI resource, using dot notation. Ignored configuration is not sent to Azure until the path is removed. Changes take effect only after apply. Non-empty lists require Terraform 1.11 or later.
+
+- `authorization_locks` - Paths ignored on management locks.
+- `authorization_role_assignments` - Paths ignored on role assignments.
+- `maintenance_maintenance_configurations` - Paths ignored on the maintenance configuration.
+
+Type:
+
+```hcl
+object({
+    authorization_locks                    = optional(list(string), [])
+    authorization_role_assignments         = optional(list(string), [])
+    maintenance_maintenance_configurations = optional(list(string), [])
+  })
+```
 
 Default: `{}`
 
@@ -118,25 +286,51 @@ Default: `{}`
 
 ### <a name="input_lock"></a> [lock](#input\_lock)
 
-Description: (Optional)  Controls the Resource Lock configuration for this resource. The following properties can be specified:
+Description: Controls the Resource Lock configuration for this resource. The following properties can be specified:
 
 - `kind` - (Required) The type of lock. Possible values are `\"CanNotDelete\"` and `\"ReadOnly\"`.
 - `name` - (Optional) The name of the lock. If not specified, a name will be generated based on the `kind` value. Changing this forces the creation of a new resource.
+- `notes` - (Optional) Notes about the lock. This value maps to `Microsoft.Authorization/locks.properties.notes`.
 
 Type:
 
 ```hcl
 object({
-    kind = string
-    name = optional(string, null)
+    kind  = string
+    name  = optional(string, null)
+    notes = optional(string, null)
   })
 ```
 
 Default: `null`
 
+### <a name="input_resource_types"></a> [resource\_types](#input\_resource\_types)
+
+Description: AzAPI resource types and API versions used by this module.
+
+- `authorization_locks` - Resource type and API version for management locks.
+- `authorization_role_assignments` - Resource type and API version for role assignments.
+- `maintenance_maintenance_configurations` - Resource type and API version for the maintenance configuration.
+
+Type:
+
+```hcl
+object({
+    authorization_locks                    = optional(string, "Microsoft.Authorization/locks@2020-05-01")
+    authorization_role_assignments         = optional(string, "Microsoft.Authorization/roleAssignments@2022-04-01")
+    maintenance_maintenance_configurations = optional(string, "Microsoft.Maintenance/maintenanceConfigurations@2023-04-01")
+  })
+```
+
+Default: `{}`
+
 ### <a name="input_retry"></a> [retry](#input\_retry)
 
-Description: Retry configuration for the resource operations
+Description: Retry configuration applied to every supported AzAPI resource declared by the module.
+
+- `error_message_regex` - Error patterns triggering a retry. Defaults to `ReferencedResourceNotProvisioned`.
+- `interval_seconds` - Initial interval in seconds. Defaults to 10.
+- `max_interval_seconds` - Maximum interval in seconds. Defaults to 180.
 
 Type:
 
@@ -152,23 +346,25 @@ Default: `{}`
 
 ### <a name="input_role_assignments"></a> [role\_assignments](#input\_role\_assignments)
 
-Description:   (Optional) A map of role assignments to create on the <RESOURCE>. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
+Description: A map of role assignments to create on the maintenance configuration. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
 
-  - `role_definition_id_or_name` - The ID or name of the role definition to assign to the principal.
-  - `principal_id` - The ID of the principal to assign the role to.
-  - `description` - (Optional) The description of the role assignment.
-  - `skip_service_principal_aad_check` - (Optional) If set to true, skips the Azure Active Directory check for the service principal in the tenant. Defaults to false.
-  - `condition` - (Optional) The condition which will be used to scope the role assignment.
-  - `condition_version` - (Optional) The version of the condition syntax. Leave as `null` if you are not using a condition, if you are then valid values are '2.0'.
-  - `delegated_managed_identity_resource_id` - (Optional) The delegated Azure Resource Id which contains a Managed Identity. Changing this forces a new resource to be created. This field is only used in cross-tenant scenario.
-  - `principal_type` - (Optional) The type of the `principal_id`. Possible values are `User`, `Group` and `ServicePrincipal`. It is necessary to explicitly set this attribute when creating role assignments if the principal creating the assignment is constrained by ABAC rules that filters on the PrincipalType attribute.
+- `name` - (Optional) The name of the role assignment. If not set, a random UUID will be generated. Changing this forces the creation of a new resource.
+- `role_definition_id_or_name` - The ID or name of the role definition to assign to the principal.
+- `principal_id` - The ID of the principal to assign the role to.
+- `description` - (Optional) The description of the role assignment.
+- `skip_service_principal_aad_check` - (Optional) If set to true, skips the Azure Active Directory check for the service principal in the tenant. Defaults to false.
+- `condition` - (Optional) The condition which will be used to scope the role assignment.
+- `condition_version` - (Optional) The version of the condition syntax. Leave as `null` if you are not using a condition, if you are then valid values are '2.0'.
+- `delegated_managed_identity_resource_id` - (Optional) The delegated Azure Resource Id which contains a Managed Identity. Changing this forces a new resource to be created. This field is only used in cross-tenant scenario.
+- `principal_type` - (Optional) The type of the `principal_id`. Possible values are `User`, `Group` and `ServicePrincipal`. It is necessary to explicitly set this attribute when creating role assignments if the principal creating the assignment is constrained by ABAC rules that filters on the PrincipalType attribute.
 
-  > Note: only set `skip_service_principal_aad_check` to true if you are assigning a role to a service principal.
+> Note: only set `skip_service_principal_aad_check` to true if you are assigning a role to a service principal.
 
 Type:
 
 ```hcl
 map(object({
+    name                                   = optional(string, null)
     role_definition_id_or_name             = string
     principal_id                           = string
     description                            = optional(string, null)
@@ -182,19 +378,33 @@ map(object({
 
 Default: `{}`
 
-### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
-
-Description: (Optional) This specifies a subscription ID which is used to construct the parent ID for the maintenance configuration.
-
-Type: `string`
-
-Default: `null`
-
 ### <a name="input_tags"></a> [tags](#input\_tags)
 
 Description: (Optional) Tags of the resource.
 
 Type: `map(string)`
+
+Default: `null`
+
+### <a name="input_timeouts"></a> [timeouts](#input\_timeouts)
+
+Description: Per-operation timeouts applied to every supported AzAPI resource declared by the module. Defaults to null (provider defaults). Each value is a Go duration string, for example `30m`.
+
+- `create` - Timeout for create operations.
+- `read` - Timeout for read operations.
+- `update` - Timeout for update operations.
+- `delete` - Timeout for delete operations.
+
+Type:
+
+```hcl
+object({
+    create = optional(string)
+    read   = optional(string)
+    update = optional(string)
+    delete = optional(string)
+  })
+```
 
 Default: `null`
 
@@ -244,7 +454,13 @@ Description: The ID of the Maintenance Configuration resource.
 
 ## Modules
 
-No modules.
+The following Modules are called:
+
+### <a name="module_avm_interfaces"></a> [avm\_interfaces](#module\_avm\_interfaces)
+
+Source: Azure/avm-utl-interfaces/azure
+
+Version: 0.9.0
 
 <!-- markdownlint-disable-next-line MD041 -->
 ## Data Collection
