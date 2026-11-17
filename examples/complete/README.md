@@ -48,7 +48,7 @@ module "naming" {
 
 module "resource_group" {
   source  = "Azure/avm-res-resources-resourcegroup/azurerm"
-  version = "0.4.0"
+  version = "0.5.0"
 
   location         = module.regions.regions[random_integer.region_index.result].name
   name             = module.naming.resource_group.name_unique
@@ -194,7 +194,7 @@ Version: 0.13.0
 
 Source: Azure/avm-res-resources-resourcegroup/azurerm
 
-Version: 0.4.0
+Version: 0.5.0
 
 ### <a name="module_test"></a> [test](#module\_test)
 
