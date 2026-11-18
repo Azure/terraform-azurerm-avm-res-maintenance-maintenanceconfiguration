@@ -13,7 +13,7 @@ Terraform address and migrates the AzureRM lock and role assignments to AzAPI at
 the same module and collection boundaries. Existing consumer module keys and role
 assignment map keys must stay unchanged.
 
-Use Terraform `>= 1.9, < 2.0` and AzAPI `~> 2.12`. Replace the module's
+Use Terraform `>= 1.12.0, < 2.0.0` and AzAPI `~> 2.12`. Replace the module's
 `resource_group_name` argument with the existing resource group's fully-qualified
 `parent_id`, for example:
 
@@ -26,8 +26,10 @@ now derived from `parent_id`.
 
 The `name` and `resource_id` outputs retain their existing meanings and types.
 The new `timeouts` object has flat `create`, `read`, `update`, and `delete` fields
-and defaults to provider timeouts. Non-empty `ignore_body_changes` lists require
-Terraform 1.11 or later; the default empty lists do not.
+and defaults to provider timeouts. TFNFR25 sets a 1.11.0 baseline; this module
+requires 1.12.0 because its resolved Interfaces 0.9.0 dependency fails validation
+under Terraform 1.11.0. Non-empty `ignore_body_changes` lists use Terraform 1.11
+write-only arguments.
 
 ### Automatic state conversion
 
@@ -158,7 +160,7 @@ Azure mutations.
 
 The following requirements are needed by this module:
 
-- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.9, < 2.0)
+- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.12.0, < 2.0.0)
 
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
 
